@@ -3,6 +3,9 @@
 
 A comprehensive web-based screenshot and image sharing platform with advanced editing capabilities, SEO optimization, and social sharing features.
 
+![Screenshot](Screenshot.png "Screenshot")
+
+
 ## 🚀 Features
 
 ### Core Features
