@@ -14,7 +14,8 @@ import {
   Eye,
   Calendar,
   Image as ImageIcon,
-  ExternalLink
+  ExternalLink,
+  Tag
 } from 'lucide-react';
 
 interface Screenshot {
@@ -24,6 +25,9 @@ interface Screenshot {
   description: string;
   timestamp: Date;
   shortLink?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  tags?: string[];
 }
 
 const ScreenshotGallery = () => {
@@ -38,7 +42,8 @@ const ScreenshotGallery = () => {
       try {
         const parsed = JSON.parse(saved).map((s: any) => ({
           ...s,
-          timestamp: new Date(s.timestamp)
+          timestamp: new Date(s.timestamp),
+          tags: s.tags || []
         }));
         setScreenshots(parsed);
       } catch (error) {
@@ -54,7 +59,10 @@ const ScreenshotGallery = () => {
 
   const filteredScreenshots = screenshots.filter(screenshot =>
     screenshot.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    screenshot.description.toLowerCase().includes(searchTerm.toLowerCase())
+    screenshot.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (screenshot.seoTitle && screenshot.seoTitle.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (screenshot.seoDescription && screenshot.seoDescription.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (screenshot.tags && screenshot.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
   );
 
   const copyToClipboard = async (text: string) => {
@@ -105,7 +113,10 @@ const ScreenshotGallery = () => {
         title: 'Project Dashboard',
         description: 'Main dashboard overview with analytics',
         timestamp: new Date(Date.now() - 86400000),
-        shortLink: 'https://scrnshot.ly/abc123'
+        shortLink: 'https://scrnshot.ly/abc123',
+        seoTitle: 'Amazing Project Dashboard - Analytics Overview',
+        seoDescription: 'Beautiful dashboard showing comprehensive project analytics and metrics for better decision making',
+        tags: ['dashboard', 'analytics', 'project', 'metrics']
       },
       {
         id: '2',
@@ -113,14 +124,20 @@ const ScreenshotGallery = () => {
         title: 'User Profile Settings',
         description: 'Account settings and preferences panel',
         timestamp: new Date(Date.now() - 172800000),
-        shortLink: 'https://scrnshot.ly/def456'
+        shortLink: 'https://scrnshot.ly/def456',
+        seoTitle: 'User Profile & Settings Interface',
+        seoDescription: 'Clean and intuitive user profile settings interface with comprehensive account management options',
+        tags: ['profile', 'settings', 'ui', 'user-interface']
       },
       {
         id: '3',
         dataUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2Y1OWU0YiIvPgogIDx0ZXh0IHg9IjIwMCIgeT0iMTUwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5EZW1vIFNjcmVlbnNob3QgMzwvdGV4dD4KPC9zdmc+',
         title: 'Chart Analytics',
         description: 'Performance metrics and data visualization',
-        timestamp: new Date(Date.now() - 259200000)
+        timestamp: new Date(Date.now() - 259200000),
+        seoTitle: 'Data Visualization & Analytics Charts',
+        seoDescription: 'Comprehensive performance metrics with beautiful data visualization and interactive charts',
+        tags: ['charts', 'analytics', 'data', 'visualization']
       }
     ];
 
@@ -128,7 +145,7 @@ const ScreenshotGallery = () => {
     
     toast({
       title: "Demo Screenshots Added!",
-      description: "Sample screenshots have been added to your gallery."
+      description: "Sample screenshots with SEO data have been added to your gallery."
     });
   };
 
@@ -145,10 +162,10 @@ const ScreenshotGallery = () => {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Search screenshots..."
+                placeholder="Search screenshots, tags, SEO data..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-64"
+                className="pl-10 w-80"
               />
             </div>
           </div>
@@ -205,13 +222,33 @@ const ScreenshotGallery = () => {
                 {screenshot.description && (
                   <p className="text-gray-600 text-sm mb-3 line-clamp-2">{screenshot.description}</p>
                 )}
+
+                {screenshot.tags && screenshot.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {screenshot.tags.slice(0, 3).map((tag, index) => (
+                      <Badge key={index} variant="secondary" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                    {screenshot.tags.length > 3 && (
+                      <Badge variant="outline" className="text-xs">
+                        +{screenshot.tags.length - 3}
+                      </Badge>
+                    )}
+                  </div>
+                )}
                 
                 <div className="flex items-center gap-2 mb-4 text-xs text-gray-500">
                   <Calendar className="h-3 w-3" />
                   {screenshot.timestamp.toLocaleDateString()}
                   {screenshot.shortLink && (
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
                       Shared
+                    </Badge>
+                  )}
+                  {screenshot.seoTitle && (
+                    <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                      SEO
                     </Badge>
                   )}
                 </div>
@@ -269,6 +306,15 @@ const ScreenshotGallery = () => {
                   <p className="text-gray-600 text-sm">
                     {selectedScreenshot.timestamp.toLocaleString()}
                   </p>
+                  {selectedScreenshot.tags && selectedScreenshot.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {selectedScreenshot.tags.map((tag, index) => (
+                        <Badge key={index} variant="secondary" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <Button
                   variant="ghost"
@@ -283,11 +329,34 @@ const ScreenshotGallery = () => {
               <img
                 src={selectedScreenshot.dataUrl}
                 alt={selectedScreenshot.title}
-                className="w-full h-auto rounded-lg"
+                className="w-full h-auto rounded-lg mb-4"
               />
               
               {selectedScreenshot.description && (
-                <p className="text-gray-700 mt-4">{selectedScreenshot.description}</p>
+                <div className="mb-4">
+                  <h4 className="font-medium text-sm text-gray-700 mb-1">Description:</h4>
+                  <p className="text-gray-700">{selectedScreenshot.description}</p>
+                </div>
+              )}
+
+              {selectedScreenshot.seoTitle && selectedScreenshot.seoTitle !== selectedScreenshot.title && (
+                <div className="bg-blue-50 p-3 rounded-lg mb-4">
+                  <h4 className="font-medium text-sm text-blue-700 mb-1 flex items-center gap-2">
+                    <Tag className="h-4 w-4" />
+                    SEO Title:
+                  </h4>
+                  <p className="text-sm text-blue-600">{selectedScreenshot.seoTitle}</p>
+                </div>
+              )}
+
+              {selectedScreenshot.seoDescription && selectedScreenshot.seoDescription !== selectedScreenshot.description && (
+                <div className="bg-blue-50 p-3 rounded-lg mb-4">
+                  <h4 className="font-medium text-sm text-blue-700 mb-1 flex items-center gap-2">
+                    <Tag className="h-4 w-4" />
+                    SEO Description:
+                  </h4>
+                  <p className="text-sm text-blue-600">{selectedScreenshot.seoDescription}</p>
+                </div>
               )}
             </div>
             
@@ -312,7 +381,7 @@ const ScreenshotGallery = () => {
               ) : (
                 <Button variant="outline" className="flex-1" disabled>
                   <Share2 className="h-4 w-4 mr-2" />
-                  Generate Share Link
+                  No Share Link
                 </Button>
               )}
             </div>
