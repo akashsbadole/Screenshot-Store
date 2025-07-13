@@ -6,7 +6,7 @@ import {
   FileImage, 
   Layers, 
   Camera, 
-  Compress,
+  Minimize2,
   RotateCw,
   Package,
   Info,
@@ -130,7 +130,7 @@ const Tools = () => {
       id: 'compress',
       title: 'Image Compression',
       description: 'Reduce file size while maintaining quality',
-      icon: Compress,
+      icon: Minimize2,
       action: handleImageCompression
     },
     {
