@@ -1,6 +1,7 @@
 
 import { Camera, Heart, Github, Twitter, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 
 export const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -28,12 +29,12 @@ export const Footer = () => {
           <div className="space-y-4">
             <h4 className="font-semibold">Features</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>Drag & Drop Upload</li>
-              <li>Image Editing</li>
-              <li>Social Sharing</li>
-              <li>QR Code Generator</li>
-              <li>SEO Optimization</li>
-              <li>Password Protection</li>
+              <li><Link to="/features" className="hover:text-foreground transition-colors">Drag & Drop Upload</Link></li>
+              <li><Link to="/features" className="hover:text-foreground transition-colors">Image Editing</Link></li>
+              <li><Link to="/features" className="hover:text-foreground transition-colors">Social Sharing</Link></li>
+              <li><Link to="/features" className="hover:text-foreground transition-colors">QR Code Generator</Link></li>
+              <li><Link to="/features" className="hover:text-foreground transition-colors">SEO Optimization</Link></li>
+              <li><Link to="/features" className="hover:text-foreground transition-colors">Password Protection</Link></li>
             </ul>
           </div>
 
@@ -41,12 +42,12 @@ export const Footer = () => {
           <div className="space-y-4">
             <h4 className="font-semibold">Tools</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>Screenshot Capture</li>
-              <li>Image Compression</li>
-              <li>Format Conversion</li>
-              <li>Bulk Processing</li>
-              <li>EXIF Data Management</li>
-              <li>Watermarking</li>
+              <li><Link to="/" className="hover:text-foreground transition-colors">Screenshot Capture</Link></li>
+              <li><Link to="/tools" className="hover:text-foreground transition-colors">Image Compression</Link></li>
+              <li><Link to="/tools" className="hover:text-foreground transition-colors">Format Conversion</Link></li>
+              <li><Link to="/tools" className="hover:text-foreground transition-colors">Bulk Processing</Link></li>
+              <li><Link to="/tools" className="hover:text-foreground transition-colors">EXIF Data Management</Link></li>
+              <li><Link to="/tools" className="hover:text-foreground transition-colors">Watermarking</Link></li>
             </ul>
           </div>
 
