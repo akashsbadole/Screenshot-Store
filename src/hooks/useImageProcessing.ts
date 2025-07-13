@@ -1,26 +1,71 @@
 
-import { useState, useCallback } from 'react';
-import { UploadOptions } from '@/types/screenshot';
+import { useState } from 'react';
+import { generateShortLink } from '@/utils/config';
+
+interface ProcessedImageResult {
+  file: File;
+  dataUrl: string;
+  metadata: {
+    size: number;
+    format: string;
+    dimensions: { width: number; height: number };
+    hasExif: boolean;
+  };
+}
 
 export const useImageProcessing = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const compressImage = useCallback(async (
-    file: File,
-    options: UploadOptions
-  ): Promise<string> => {
+  const processImage = async (file: File): Promise<ProcessedImageResult> => {
+    setIsProcessing(true);
+    
+    try {
+      // Create data URL for preview
+      const dataUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.readAsDataURL(file);
+      });
+
+      // Get image dimensions
+      const dimensions = await new Promise<{ width: number; height: number }>((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve({ width: img.width, height: img.height });
+        img.src = dataUrl;
+      });
+
+      // Check for EXIF data (simple check)
+      const hasExif = file.type === 'image/jpeg' && file.size > 50000; // Rough estimation
+
+      return {
+        file,
+        dataUrl,
+        metadata: {
+          size: file.size,
+          format: file.type,
+          dimensions,
+          hasExif
+        }
+      };
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const compressImage = async (file: File, quality: number = 0.8): Promise<File> => {
     return new Promise((resolve) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const img = new Image();
 
       img.onload = () => {
-        // Calculate new dimensions if needed
+        // Calculate new dimensions (max 1920x1080 for web sharing)
+        const maxWidth = 1920;
+        const maxHeight = 1080;
         let { width, height } = img;
-        const maxSize = 1920;
-        
-        if (width > maxSize || height > maxSize) {
-          const ratio = Math.min(maxSize / width, maxSize / height);
+
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
           width *= ratio;
           height *= ratio;
         }
@@ -28,64 +73,74 @@ export const useImageProcessing = () => {
         canvas.width = width;
         canvas.height = height;
 
-        if (ctx) {
-          // Add watermark if enabled
-          ctx.drawImage(img, 0, 0, width, height);
-          
-          if (options.addWatermark && options.watermarkText) {
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-            ctx.font = '24px Arial';
-            ctx.textAlign = 'right';
-            ctx.fillText(options.watermarkText, width - 20, height - 20);
+        // Draw and compress
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const compressedFile = new File([blob], file.name, {
+              type: file.type,
+              lastModified: Date.now()
+            });
+            resolve(compressedFile);
+          } else {
+            resolve(file); // Fallback to original
           }
-
-          const mimeType = `image/${options.format}`;
-          const quality = options.compress ? options.quality / 100 : 1;
-          const dataUrl = canvas.toDataURL(mimeType, quality);
-          resolve(dataUrl);
-        }
+        }, file.type, quality);
       };
 
       img.src = URL.createObjectURL(file);
     });
-  }, []);
+  };
 
-  const extractExifData = useCallback(async (file: File) => {
-    // Simple EXIF extraction (in real app, use exifr library)
+  const convertFormat = async (file: File, targetFormat: string): Promise<File> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx?.drawImage(img, 0, 0);
+
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const convertedFile = new File([blob], 
+              file.name.replace(/\.[^/.]+$/, `.${targetFormat.split('/')[1]}`), {
+              type: targetFormat,
+              lastModified: Date.now()
+            });
+            resolve(convertedFile);
+          } else {
+            resolve(file);
+          }
+        }, targetFormat, 0.9);
+      };
+
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const removeExifData = async (file: File): Promise<File> => {
+    // Simple EXIF removal by re-drawing the image
+    return compressImage(file, 1.0);
+  };
+
+  const generateShareableData = (imageId: string, title?: string) => {
     return {
-      fileSize: file.size,
-      mimeType: file.type,
-      lastModified: new Date(file.lastModified),
-      name: file.name
+      shortLink: generateShortLink(imageId),
+      shareUrl: `${window.location.origin}/share/${imageId}`,
+      qrCodeData: generateShortLink(imageId)
     };
-  }, []);
-
-  const processMultipleImages = useCallback(async (
-    files: File[],
-    options: UploadOptions,
-    onProgress?: (progress: number) => void
-  ): Promise<string[]> => {
-    setIsProcessing(true);
-    const results: string[] = [];
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const processedImage = await compressImage(file, options);
-      results.push(processedImage);
-      
-      if (onProgress) {
-        onProgress((i + 1) / files.length * 100);
-      }
-    }
-
-    setIsProcessing(false);
-    return results;
-  }, [compressImage]);
+  };
 
   return {
-    isProcessing,
+    processImage,
     compressImage,
-    extractExifData,
-    processMultipleImages
+    convertFormat,
+    removeExifData,
+    generateShareableData,
+    isProcessing
   };
 };

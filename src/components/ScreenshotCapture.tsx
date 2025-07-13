@@ -1,518 +1,311 @@
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
+import { Camera, Upload, Clipboard, Download, Share2, Settings, Zap, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
-import { Camera, Upload, Share2, Edit3, Copy, Download, X, Clipboard, Tag, FileText } from 'lucide-react';
+import { useImageProcessing } from '@/hooks/useImageProcessing';
+import ImageUploadZone from './ImageUploadZone';
 import ScreenshotEditor from './ScreenshotEditor';
-import { ImageUploadZone } from './ImageUploadZone';
-import { UploadOptions } from '@/types/screenshot';
+import { generateShortLink, generateShareableUrl } from '@/utils/config';
 
-interface Screenshot {
+interface ProcessedImage {
   id: string;
+  file: File;
   dataUrl: string;
-  title: string;
-  description: string;
-  timestamp: Date;
-  shortLink?: string;
-  seoTitle?: string;
-  seoDescription?: string;
-  tags?: string[];
+  metadata: {
+    size: number;
+    format: string;
+    dimensions: { width: number; height: number };
+    hasExif: boolean;
+  };
 }
 
 const ScreenshotCapture = () => {
-  const [screenshots, setScreenshots] = useState<Screenshot[]>([]);
-  const [currentScreenshot, setCurrentScreenshot] = useState<Screenshot | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [seoTitle, setSeoTitle] = useState('');
-  const [seoDescription, setSeoDescription] = useState('');
-  const [tags, setTags] = useState('');
-  const [isUploading, setIsUploading] = useState(false);
+  const [capturedImages, setCapturedImages] = useState<ProcessedImage[]>([]);
+  const [editingImage, setEditingImage] = useState<ProcessedImage | null>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { processImage, compressImage } = useImageProcessing();
 
-  const uploadOptions: UploadOptions = {
-    compress: true,
-    quality: 80,
-    format: 'png',
-    addWatermark: false,
-    watermarkText: '',
-    removeExif: false
-  };
-
-  // Handle paste events for images (Ctrl+V)
-  useEffect(() => {
-    const handlePaste = (event: ClipboardEvent) => {
-      const items = event.clipboardData?.items;
-      if (!items) return;
-
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        if (item.type.startsWith('image/')) {
-          const file = item.getAsFile();
-          if (file) {
-            handleImageFromFile(file);
-            event.preventDefault();
-          }
-        }
-      }
-    };
-
-    document.addEventListener('paste', handlePaste);
-    return () => document.removeEventListener('paste', handlePaste);
-  }, [title, description, seoTitle, seoDescription, tags]);
-
+  // Capture screen using modern Screen Capture API
   const captureScreen = useCallback(async () => {
-    try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-        toast({
-          title: "Not Supported",
-          description: "Screen capture is not supported in this browser.",
-          variant: "destructive"
-        });
-        return;
-      }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+      toast({
+        title: "Not Supported",
+        description: "Screen capture is not supported in this browser.",
+        variant: "destructive"
+      });
+      return;
+    }
 
+    try {
+      setIsCapturing(true);
+      
+      // Request screen capture
       const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: {
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        }
+        video: { mediaSource: 'screen' }
       });
 
+      // Create video element to capture frame
       const video = document.createElement('video');
       video.srcObject = stream;
       video.play();
 
       video.addEventListener('loadedmetadata', () => {
+        // Create canvas and capture frame
         const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         
-        const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(video, 0, 0);
-          const dataUrl = canvas.toDataURL('image/png');
           
-          createScreenshot(dataUrl, title || `Screenshot ${new Date().toLocaleString()}`);
-          
-          // Stop the stream
-          stream.getTracks().forEach(track => track.stop());
-          
-          toast({
-            title: "Screenshot Captured!",
-            description: "Your screenshot has been captured successfully."
-          });
+          // Convert to blob and create file
+          canvas.toBlob(async (blob) => {
+            if (blob) {
+              const file = new File([blob], `screenshot-${Date.now()}.png`, { type: 'image/png' });
+              await handleImageCapture([file]);
+            }
+            
+            // Stop the stream
+            stream.getTracks().forEach(track => track.stop());
+          }, 'image/png', 0.9);
         }
       });
 
+      toast({
+        title: "Screen Captured!",
+        description: "Screenshot has been captured successfully."
+      });
+
     } catch (error) {
-      console.error('Error capturing screenshot:', error);
+      console.error('Screen capture error:', error);
       toast({
         title: "Capture Failed",
-        description: "Failed to capture screenshot. Please try again.",
-        variant: "destructive"
-      });
-    }
-  }, [title, description, seoTitle, seoDescription, tags]);
-
-  const handleImageFromFile = useCallback((file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      createScreenshot(dataUrl, title || file.name);
-      
-      toast({
-        title: "Image Added!",
-        description: "Your image has been added successfully."
-      });
-    };
-    reader.readAsDataURL(file);
-  }, [title, description, seoTitle, seoDescription, tags]);
-
-  const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      handleImageFromFile(file);
-    } else {
-      toast({
-        title: "Invalid File",
-        description: "Please select a valid image file.",
-        variant: "destructive"
-      });
-    }
-  }, [handleImageFromFile]);
-
-  const handleImagesProcessed = useCallback((dataUrls: string[], files: File[]) => {
-    dataUrls.forEach((dataUrl, index) => {
-      const file = files[index];
-      createScreenshot(dataUrl, title || file.name);
-    });
-  }, [title, description, seoTitle, seoDescription, tags]);
-
-  const createScreenshot = (dataUrl: string, screenshotTitle: string) => {
-    const newScreenshot: Screenshot = {
-      id: Date.now().toString(),
-      dataUrl,
-      title: screenshotTitle,
-      description: description || '',
-      timestamp: new Date(),
-      seoTitle: seoTitle || screenshotTitle,
-      seoDescription: seoDescription || description || '',
-      tags: tags ? tags.split(',').map(tag => tag.trim()).filter(Boolean) : []
-    };
-
-    setCurrentScreenshot(newScreenshot);
-    setScreenshots(prev => {
-      const updated = [newScreenshot, ...prev];
-      localStorage.setItem('screenshots', JSON.stringify(updated));
-      return updated;
-    });
-  };
-
-  const generateShortLink = useCallback(async (screenshot: Screenshot) => {
-    setIsUploading(true);
-    try {
-      // Simulate API call to generate short link with SEO data
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const shortLink = `https://scrnshot.ly/${Math.random().toString(36).substr(2, 8)}`;
-      
-      setScreenshots(prev => {
-        const updated = prev.map(s => 
-          s.id === screenshot.id 
-            ? { ...s, shortLink } 
-            : s
-        );
-        localStorage.setItem('screenshots', JSON.stringify(updated));
-        return updated;
-      });
-      
-      setCurrentScreenshot(prev => 
-        prev?.id === screenshot.id 
-          ? { ...prev, shortLink }
-          : prev
-      );
-
-      await navigator.clipboard.writeText(shortLink);
-      
-      toast({
-        title: "Shareable Link Generated!",
-        description: "Short link with SEO data has been copied to your clipboard."
-      });
-    } catch (error) {
-      toast({
-        title: "Failed to Generate Link",
-        description: "Please try again later.",
+        description: "Failed to capture screen. Please try again.",
         variant: "destructive"
       });
     } finally {
-      setIsUploading(false);
+      setIsCapturing(false);
     }
   }, []);
 
-  const downloadScreenshot = useCallback((screenshot: Screenshot) => {
-    const link = document.createElement('a');
-    link.download = `${screenshot.title}.png`;
-    link.href = screenshot.dataUrl;
-    link.click();
+  // Handle paste from clipboard
+  const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
+    const items = Array.from(e.clipboardData.items);
+    const imageItems = items.filter(item => item.type.startsWith('image/'));
     
-    toast({
-      title: "Downloaded!",
-      description: "Screenshot has been downloaded to your device."
-    });
-  }, []);
-
-  const copyToClipboard = useCallback(async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
+    if (imageItems.length === 0) {
       toast({
-        title: "Copied!",
-        description: "Link has been copied to your clipboard."
-      });
-    } catch (error) {
-      toast({
-        title: "Copy Failed",
-        description: "Unable to copy to clipboard.",
+        title: "No Image Found",
+        description: "No image found in clipboard.",
         variant: "destructive"
       });
+      return;
+    }
+
+    const files: File[] = [];
+    for (const item of imageItems) {
+      const file = item.getAsFile();
+      if (file) {
+        files.push(file);
+      }
+    }
+
+    if (files.length > 0) {
+      await handleImageCapture(files);
+      toast({
+        title: "Image Pasted!",
+        description: `${files.length} image(s) pasted from clipboard.`
+      });
     }
   }, []);
 
-  const clearForm = () => {
-    setTitle('');
-    setDescription('');
-    setSeoTitle('');
-    setSeoDescription('');
-    setTags('');
+  // Process captured/uploaded images
+  const handleImageCapture = useCallback(async (files: File[]) => {
+    const processedImages: ProcessedImage[] = [];
+    
+    for (const file of files) {
+      try {
+        const processed = await processImage(file);
+        const compressed = await compressImage(processed.file);
+        
+        processedImages.push({
+          id: `img-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          file: compressed,
+          dataUrl: processed.dataUrl,
+          metadata: processed.metadata
+        });
+      } catch (error) {
+        console.error('Image processing error:', error);
+        toast({
+          title: "Processing Error",
+          description: `Failed to process ${file.name}`,
+          variant: "destructive"
+        });
+      }
+    }
+
+    if (processedImages.length > 0) {
+      setCapturedImages(prev => [...prev, ...processedImages]);
+    }
+  }, [processImage, compressImage]);
+
+  // Save image to gallery
+  const saveToGallery = (image: ProcessedImage, editedDataUrl?: string) => {
+    const screenshot = {
+      id: image.id,
+      dataUrl: editedDataUrl || image.dataUrl,
+      title: `Screenshot ${new Date().toLocaleString()}`,
+      description: 'Captured screenshot',
+      timestamp: new Date(),
+      shortLink: generateShortLink(image.id),
+      seoTitle: `Screenshot - ${new Date().toLocaleDateString()}`,
+      seoDescription: 'Professional screenshot captured and processed',
+      tags: ['screenshot', 'capture']
+    };
+
+    // Save to localStorage (in production, this would be saved to your database)
+    const existing = JSON.parse(localStorage.getItem('screenshots') || '[]');
+    existing.push(screenshot);
+    localStorage.setItem('screenshots', JSON.stringify(existing));
+
+    toast({
+      title: "Saved!",
+      description: "Screenshot saved to gallery with shareable link."
+    });
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6" onPaste={handlePaste} tabIndex={0}>
       {/* Capture Controls */}
       <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-2xl">
-            <Camera className="h-6 w-6 text-blue-600" />
-            Capture & Share Screenshots
+          <CardTitle className="flex items-center gap-2">
+            <Camera className="h-5 w-5 text-purple-600" />
+            Screen Capture & Upload
           </CardTitle>
-          <p className="text-gray-600">Capture, paste, or upload images to create shareable links with SEO optimization</p>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Basic Info */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Basic Information
-            </h3>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="title">Title</Label>
-                <Input
-                  id="title"
-                  placeholder="Enter screenshot title..."
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="tags">Tags (comma-separated)</Label>
-                <Input
-                  id="tags"
-                  placeholder="web, design, screenshot..."
-                  value={tags}
-                  onChange={(e) => setTags(e.target.value)}
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                placeholder="Enter description..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={2}
-              />
-            </div>
-          </div>
-
-          {/* SEO Details */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Tag className="h-5 w-5" />
-              SEO Details (for sharing)
-            </h3>
-            <div>
-              <Label htmlFor="seoTitle">SEO Title</Label>
-              <Input
-                id="seoTitle"
-                placeholder="Optimized title for social sharing..."
-                value={seoTitle}
-                onChange={(e) => setSeoTitle(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="seoDescription">SEO Description</Label>
-              <Textarea
-                id="seoDescription"
-                placeholder="Description that will appear when shared on social media..."
-                value={seoDescription}
-                onChange={(e) => setSeoDescription(e.target.value)}
-                rows={2}
-              />
-            </div>
-          </div>
-
-          {/* Drag & Drop Upload Zone */}
-          <ImageUploadZone
-            onImagesProcessed={handleImagesProcessed}
-            uploadOptions={uploadOptions}
-            maxFiles={10}
-          />
-          
-          <div className="flex flex-wrap gap-3">
-            <Button 
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Button
               onClick={captureScreen}
-              size="lg"
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              disabled={isCapturing}
+              className="h-20 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
             >
-              <Camera className="h-5 w-5 mr-2" />
-              Capture Screen
+              <div className="flex flex-col items-center gap-2">
+                {isCapturing ? (
+                  <Zap className="h-6 w-6 animate-pulse" />
+                ) : (
+                  <Camera className="h-6 w-6" />
+                )}
+                <span>{isCapturing ? 'Capturing...' : 'Capture Screen'}</span>
+              </div>
             </Button>
-            
-            <Button 
-              variant="outline" 
+
+            <Button
+              variant="outline"
               onClick={() => fileInputRef.current?.click()}
-              size="lg"
+              className="h-20 border-2 border-dashed hover:border-purple-400"
             >
-              <Upload className="h-5 w-5 mr-2" />
-              Upload Image
+              <div className="flex flex-col items-center gap-2">
+                <Upload className="h-6 w-6" />
+                <span>Upload Files</span>
+              </div>
             </Button>
 
-            <Button 
-              variant="outline" 
-              size="lg"
-              className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
-            >
-              <Clipboard className="h-5 w-5 mr-2" />
-              Paste Image (Ctrl+V)
-            </Button>
+            <div className="flex flex-col items-center justify-center h-20 bg-gray-50 rounded-lg border-2 border-dashed">
+              <Clipboard className="h-6 w-6 text-gray-400 mb-2" />
+              <span className="text-sm text-gray-600">Press Ctrl+V to paste</span>
+            </div>
+          </div>
 
-            {(title || description || seoTitle || seoDescription || tags) && (
-              <Button 
-                variant="ghost" 
-                onClick={clearForm}
-                size="lg"
-              >
-                <X className="h-5 w-5 mr-2" />
-                Clear Form
-              </Button>
-            )}
-            
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/*"
+            onChange={(e) => {
+              const files = Array.from(e.target.files || []);
+              if (files.length > 0) {
+                handleImageCapture(files);
+              }
+            }}
+            className="hidden"
+          />
+
+          <div className="mt-6">
+            <ImageUploadZone onImagesUploaded={handleImageCapture} />
           </div>
         </CardContent>
       </Card>
 
-      {/* Screenshot Editor */}
-      {isEditing && currentScreenshot && (
+      {/* Captured Images */}
+      {capturedImages.length > 0 && (
         <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Edit3 className="h-5 w-5 text-purple-600" />
-              Edit Screenshot
+              <ImageIcon className="h-5 w-5 text-green-600" />
+              Captured Images ({capturedImages.length})
             </CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsEditing(false)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
           </CardHeader>
           <CardContent>
-            <ScreenshotEditor
-              screenshot={currentScreenshot}
-              onSave={(editedScreenshot) => {
-                setCurrentScreenshot(editedScreenshot);
-                setScreenshots(prev => {
-                  const updated = prev.map(s => s.id === editedScreenshot.id ? editedScreenshot : s);
-                  localStorage.setItem('screenshots', JSON.stringify(updated));
-                  return updated;
-                });
-                setIsEditing(false);
-                toast({
-                  title: "Screenshot Updated!",
-                  description: "Your edits have been saved."
-                });
-              }}
-            />
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {capturedImages.map((image) => (
+                <div key={image.id} className="relative group">
+                  <img
+                    src={image.dataUrl}
+                    alt="Captured"
+                    className="w-full h-32 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => setEditingImage(image)}
+                  />
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 rounded-lg transition-all duration-300 flex items-center justify-center">
+                    <div className="opacity-0 group-hover:opacity-100 flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => setEditingImage(image)}
+                      >
+                        <Settings className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => saveToGallery(image)}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="absolute bottom-2 left-2 right-2">
+                    <div className="bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+                      {(image.metadata.size / 1024).toFixed(1)}KB • {image.metadata.format.toUpperCase()}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Current Screenshot Display */}
-      {currentScreenshot && !isEditing && (
-        <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xl">{currentScreenshot.title}</h3>
-                {currentScreenshot.tags && currentScreenshot.tags.length > 0 && (
-                  <div className="flex gap-1 mt-2">
-                    {currentScreenshot.tags.map((tag, index) => (
-                      <span key={index} className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditing(true)}
-                >
-                  <Edit3 className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => downloadScreenshot(currentScreenshot)}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download
-                </Button>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="relative">
-              <img
-                src={currentScreenshot.dataUrl}
-                alt={currentScreenshot.title}
-                className="w-full h-auto rounded-lg shadow-md max-h-96 object-contain bg-gray-50"
-              />
-            </div>
-            
-            {currentScreenshot.description && (
-              <p className="text-gray-600">{currentScreenshot.description}</p>
-            )}
-
-            {currentScreenshot.seoTitle && currentScreenshot.seoTitle !== currentScreenshot.title && (
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <h4 className="font-medium text-sm text-gray-700 mb-1">SEO Title:</h4>
-                <p className="text-sm text-gray-600">{currentScreenshot.seoTitle}</p>
-              </div>
-            )}
-
-            {currentScreenshot.seoDescription && currentScreenshot.seoDescription !== currentScreenshot.description && (
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <h4 className="font-medium text-sm text-gray-700 mb-1">SEO Description:</h4>
-                <p className="text-sm text-gray-600">{currentScreenshot.seoDescription}</p>
-              </div>
-            )}
-            
-            <div className="flex flex-wrap gap-3">
-              <Button
-                onClick={() => generateShortLink(currentScreenshot)}
-                disabled={isUploading}
-                className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
-              >
-                <Share2 className="h-4 w-4 mr-2" />
-                {isUploading ? 'Generating...' : 'Generate Shareable Link'}
-              </Button>
-              
-              {currentScreenshot.shortLink && (
-                <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 flex-1 min-w-0">
-                  <code className="text-sm text-gray-700 truncate flex-1">
-                    {currentScreenshot.shortLink}
-                  </code>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyToClipboard(currentScreenshot.shortLink!)}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+      {/* Image Editor Modal */}
+      {editingImage && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-6xl max-h-[90vh] overflow-hidden w-full">
+            <ScreenshotEditor
+              image={editingImage}
+              onSave={(editedDataUrl) => {
+                saveToGallery(editingImage, editedDataUrl);
+                setEditingImage(null);
+              }}
+              onClose={() => setEditingImage(null)}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

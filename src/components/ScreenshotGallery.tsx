@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -112,6 +111,8 @@ const ScreenshotGallery = () => {
   };
 
   const generateDemoScreenshots = () => {
+    const baseUrl = window.location.origin; // Use current domain
+    
     const demoScreenshots: Screenshot[] = [
       {
         id: '1',
@@ -119,7 +120,7 @@ const ScreenshotGallery = () => {
         title: 'Project Dashboard',
         description: 'Main dashboard overview with analytics',
         timestamp: new Date(Date.now() - 86400000),
-        shortLink: 'https://scrnshot.ly/abc123',
+        shortLink: `${baseUrl}/s/abc123`,
         seoTitle: 'Amazing Project Dashboard - Analytics Overview',
         seoDescription: 'Beautiful dashboard showing comprehensive project analytics and metrics for better decision making',
         tags: ['dashboard', 'analytics', 'project', 'metrics']
@@ -130,7 +131,7 @@ const ScreenshotGallery = () => {
         title: 'User Profile Settings',
         description: 'Account settings and preferences panel',
         timestamp: new Date(Date.now() - 172800000),
-        shortLink: 'https://scrnshot.ly/def456',
+        shortLink: `${baseUrl}/s/def456`,
         seoTitle: 'User Profile & Settings Interface',
         seoDescription: 'Clean and intuitive user profile settings interface with comprehensive account management options',
         tags: ['profile', 'settings', 'ui', 'user-interface']
@@ -141,6 +142,7 @@ const ScreenshotGallery = () => {
         title: 'Chart Analytics',
         description: 'Performance metrics and data visualization',
         timestamp: new Date(Date.now() - 259200000),
+        shortLink: `${baseUrl}/s/ghi789`,
         seoTitle: 'Data Visualization & Analytics Charts',
         seoDescription: 'Comprehensive performance metrics with beautiful data visualization and interactive charts',
         tags: ['charts', 'analytics', 'data', 'visualization']
@@ -151,7 +153,7 @@ const ScreenshotGallery = () => {
     
     toast({
       title: "Demo Screenshots Added!",
-      description: "Sample screenshots with SEO data have been added to your gallery."
+      description: "Sample screenshots with your domain's shareable links have been added."
     });
   };
 
