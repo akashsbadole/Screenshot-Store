@@ -8,6 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { Camera, Upload, Share2, Edit3, Copy, Download, X, Clipboard, Tag, FileText } from 'lucide-react';
 import ScreenshotEditor from './ScreenshotEditor';
+import { ImageUploadZone } from './ImageUploadZone';
+import { UploadOptions } from '@/types/screenshot';
 
 interface Screenshot {
   id: string;
@@ -33,7 +35,16 @@ const ScreenshotCapture = () => {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle paste events for images
+  const uploadOptions: UploadOptions = {
+    compress: true,
+    quality: 80,
+    format: 'png',
+    addWatermark: false,
+    watermarkText: '',
+    removeExif: false
+  };
+
+  // Handle paste events for images (Ctrl+V)
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent) => {
       const items = event.clipboardData?.items;
@@ -135,6 +146,13 @@ const ScreenshotCapture = () => {
       });
     }
   }, [handleImageFromFile]);
+
+  const handleImagesProcessed = useCallback((dataUrls: string[], files: File[]) => {
+    dataUrls.forEach((dataUrl, index) => {
+      const file = files[index];
+      createScreenshot(dataUrl, title || file.name);
+    });
+  }, [title, description, seoTitle, seoDescription, tags]);
 
   const createScreenshot = (dataUrl: string, screenshotTitle: string) => {
     const newScreenshot: Screenshot = {
@@ -309,6 +327,13 @@ const ScreenshotCapture = () => {
               />
             </div>
           </div>
+
+          {/* Drag & Drop Upload Zone */}
+          <ImageUploadZone
+            onImagesProcessed={handleImagesProcessed}
+            uploadOptions={uploadOptions}
+            maxFiles={10}
+          />
           
           <div className="flex flex-wrap gap-3">
             <Button 

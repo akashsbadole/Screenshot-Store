@@ -3,183 +3,159 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { 
-  Share2, 
   MessageCircle, 
   Instagram, 
   Facebook, 
   Twitter,
+  Share2,
   Copy,
-  Mail
+  Mail,
+  Linkedin
 } from 'lucide-react';
 
 interface SocialShareProps {
   url: string;
   title: string;
   description?: string;
-  imageUrl?: string;
 }
 
-export const SocialShare = ({ url, title, description, imageUrl }: SocialShareProps) => {
-  const shareToWhatsApp = () => {
-    const text = `${title}\n${description || ''}\n${url}`;
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
-    window.open(whatsappUrl, '_blank');
+const SocialShare = ({ url, title, description }: SocialShareProps) => {
+  const encodedUrl = encodeURIComponent(url);
+  const encodedTitle = encodeURIComponent(title);
+  const encodedDescription = encodeURIComponent(description || '');
+
+  const shareLinks = [
+    {
+      name: 'WhatsApp',
+      icon: MessageCircle,
+      url: `https://wa.me/?text=${encodedTitle}%20${encodedUrl}`,
+      color: 'bg-green-500 hover:bg-green-600'
+    },
+    {
+      name: 'Twitter',
+      icon: Twitter,
+      url: `https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`,
+      color: 'bg-blue-400 hover:bg-blue-500'
+    },
+    {
+      name: 'Facebook',
+      icon: Facebook,
+      url: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+      color: 'bg-blue-600 hover:bg-blue-700'
+    },
+    {
+      name: 'LinkedIn',
+      icon: Linkedin,
+      url: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
+      color: 'bg-blue-700 hover:bg-blue-800'
+    },
+    {
+      name: 'Email',
+      icon: Mail,
+      url: `mailto:?subject=${encodedTitle}&body=${encodedDescription}%0A%0A${encodedUrl}`,
+      color: 'bg-gray-600 hover:bg-gray-700'
+    }
+  ];
+
+  const handleShare = (shareUrl: string, platform: string) => {
+    window.open(shareUrl, '_blank', 'width=600,height=400');
     
     toast({
-      title: "Sharing to WhatsApp",
-      description: "Opening WhatsApp..."
+      title: "Opening Share Dialog",
+      description: `Sharing to ${platform}...`
     });
   };
 
-  const shareToTwitter = () => {
-    const text = `${title} ${url}`;
-    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
-    window.open(twitterUrl, '_blank');
-    
-    toast({
-      title: "Sharing to Twitter",
-      description: "Opening Twitter..."
-    });
-  };
-
-  const shareToFacebook = () => {
-    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
-    window.open(facebookUrl, '_blank');
-    
-    toast({
-      title: "Sharing to Facebook",
-      description: "Opening Facebook..."
-    });
-  };
-
-  const shareToInstagram = () => {
-    // Instagram doesn't support direct URL sharing, so we copy the link
-    navigator.clipboard.writeText(url);
-    toast({
-      title: "Link Copied",
-      description: "Link copied to clipboard. You can now paste it in Instagram."
-    });
-  };
-
-  const shareViaEmail = () => {
-    const subject = encodeURIComponent(title);
-    const body = encodeURIComponent(`${description || ''}\n\n${url}`);
-    const emailUrl = `mailto:?subject=${subject}&body=${body}`;
-    window.location.href = emailUrl;
-    
-    toast({
-      title: "Opening Email",
-      description: "Email client opening..."
-    });
-  };
-
-  const copyLink = async () => {
+  const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(url);
       toast({
-        title: "Link Copied",
-        description: "Link has been copied to your clipboard."
+        title: "Link Copied!",
+        description: "Share link has been copied to your clipboard."
       });
     } catch (error) {
       toast({
         title: "Copy Failed",
-        description: "Unable to copy link.",
+        description: "Unable to copy to clipboard.",
         variant: "destructive"
       });
     }
   };
 
-  const shareNative = async () => {
+  const handleNativeShare = async () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title,
+          title: title,
           text: description,
-          url
+          url: url,
         });
       } catch (error) {
-        // User cancelled sharing
+        console.log('Error sharing:', error);
       }
     } else {
-      copyLink();
+      copyToClipboard();
     }
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <Card className="w-full max-w-md">
+      <CardHeader className="text-center">
+        <CardTitle className="flex items-center justify-center gap-2">
           <Share2 className="h-5 w-5" />
-          Share Image
+          Share Screenshot
         </CardTitle>
+        <p className="text-sm text-gray-600 truncate">{title}</p>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Social Media Buttons */}
         <div className="grid grid-cols-2 gap-3">
+          {shareLinks.map((platform) => (
+            <Button
+              key={platform.name}
+              onClick={() => handleShare(platform.url, platform.name)}
+              className={`${platform.color} text-white flex items-center justify-center gap-2`}
+              size="sm"
+            >
+              <platform.icon className="h-4 w-4" />
+              {platform.name}
+            </Button>
+          ))}
+        </div>
+
+        {/* Copy Link and Native Share */}
+        <div className="space-y-2 pt-4 border-t">
           <Button
+            onClick={copyToClipboard}
             variant="outline"
-            onClick={shareToWhatsApp}
-            className="flex items-center gap-2 bg-green-50 hover:bg-green-100 border-green-200 text-green-700"
+            className="w-full"
+            size="sm"
           >
-            <MessageCircle className="h-4 w-4" />
-            WhatsApp
-          </Button>
-          
-          <Button
-            variant="outline"
-            onClick={shareToTwitter}
-            className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700"
-          >
-            <Twitter className="h-4 w-4" />
-            Twitter
-          </Button>
-          
-          <Button
-            variant="outline"
-            onClick={shareToFacebook}
-            className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700"
-          >
-            <Facebook className="h-4 w-4" />
-            Facebook
-          </Button>
-          
-          <Button
-            variant="outline"
-            onClick={shareToInstagram}
-            className="flex items-center gap-2 bg-pink-50 hover:bg-pink-100 border-pink-200 text-pink-700"
-          >
-            <Instagram className="h-4 w-4" />
-            Instagram
-          </Button>
-          
-          <Button
-            variant="outline"
-            onClick={shareViaEmail}
-            className="flex items-center gap-2"
-          >
-            <Mail className="h-4 w-4" />
-            Email
-          </Button>
-          
-          <Button
-            variant="outline"
-            onClick={copyLink}
-            className="flex items-center gap-2"
-          >
-            <Copy className="h-4 w-4" />
+            <Copy className="h-4 w-4 mr-2" />
             Copy Link
           </Button>
+          
+          {navigator.share && (
+            <Button
+              onClick={handleNativeShare}
+              variant="outline"
+              className="w-full"
+              size="sm"
+            >
+              <Share2 className="h-4 w-4 mr-2" />
+              More Options
+            </Button>
+          )}
         </div>
-        
-        {navigator.share && (
-          <Button
-            onClick={shareNative}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-          >
-            <Share2 className="h-4 w-4 mr-2" />
-            Share (Native)
-          </Button>
-        )}
+
+        {/* Direct Link Display */}
+        <div className="bg-gray-50 p-3 rounded-lg">
+          <p className="text-xs text-gray-500 mb-1">Direct Link:</p>
+          <code className="text-xs text-gray-700 break-all">{url}</code>
+        </div>
       </CardContent>
     </Card>
   );
 };
+
+export default SocialShare;

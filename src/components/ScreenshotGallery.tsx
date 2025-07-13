@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
+import { QRCodeGenerator } from './QRCodeGenerator';
+import SocialShare from './SocialShare';
 import { 
   Search, 
   Share2, 
@@ -15,7 +17,9 @@ import {
   Calendar,
   Image as ImageIcon,
   ExternalLink,
-  Tag
+  Tag,
+  QrCode,
+  Users
 } from 'lucide-react';
 
 interface Screenshot {
@@ -34,6 +38,8 @@ const ScreenshotGallery = () => {
   const [screenshots, setScreenshots] = useState<Screenshot[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedScreenshot, setSelectedScreenshot] = useState<Screenshot | null>(null);
+  const [showQRCode, setShowQRCode] = useState(false);
+  const [showSocialShare, setShowSocialShare] = useState(false);
 
   // Load screenshots from localStorage on component mount
   useEffect(() => {
@@ -253,7 +259,7 @@ const ScreenshotGallery = () => {
                   )}
                 </div>
                 
-                <div className="flex gap-2">
+                <div className="flex gap-2 mb-2">
                   <Button
                     variant="outline"
                     size="sm"
@@ -280,6 +286,37 @@ const ScreenshotGallery = () => {
                       Share
                     </Button>
                   )}
+                </div>
+
+                <div className="flex gap-2">
+                  {screenshot.shortLink && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedScreenshot(screenshot);
+                          setShowQRCode(true);
+                        }}
+                        className="flex-1"
+                      >
+                        <QrCode className="h-3 w-3 mr-1" />
+                        QR Code
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedScreenshot(screenshot);
+                          setShowSocialShare(true);
+                        }}
+                        className="flex-1"
+                      >
+                        <Users className="h-3 w-3 mr-1" />
+                        Social
+                      </Button>
+                    </>
+                  )}
                   
                   <Button
                     variant="destructive"
@@ -296,7 +333,7 @@ const ScreenshotGallery = () => {
       )}
 
       {/* Screenshot Modal */}
-      {selectedScreenshot && (
+      {selectedScreenshot && !showQRCode && !showSocialShare && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-hidden">
             <div className="p-6 border-b">
@@ -385,6 +422,55 @@ const ScreenshotGallery = () => {
                 </Button>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* QR Code Modal */}
+      {showQRCode && selectedScreenshot?.shortLink && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">QR Code for {selectedScreenshot.title}</h3>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowQRCode(false);
+                  setSelectedScreenshot(null);
+                }}
+              >
+                ✕
+              </Button>
+            </div>
+            <QRCodeGenerator 
+              url={selectedScreenshot.shortLink} 
+              title={selectedScreenshot.title}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Social Share Modal */}
+      {showSocialShare && selectedScreenshot?.shortLink && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Share {selectedScreenshot.title}</h3>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowSocialShare(false);
+                  setSelectedScreenshot(null);
+                }}
+              >
+                ✕
+              </Button>
+            </div>
+            <SocialShare 
+              url={selectedScreenshot.shortLink}
+              title={selectedScreenshot.seoTitle || selectedScreenshot.title}
+              description={selectedScreenshot.seoDescription || selectedScreenshot.description}
+            />
           </div>
         </div>
       )}

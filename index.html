@@ -1,70 +1,93 @@
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Screenshot Store - Fast Screen Capture & Share Tool</title>
-    <meta name="description" content="Fast screenshot tool with area selection, powerful editing, and instant sharing via short links. Capture any area on your desktop with 2 button-clicks and share instantly." />
-    <meta name="keywords" content="screenshot, screen capture, image sharing, short link, area selection, image editor, desktop capture, share screenshots" />
+    
+    <!-- Primary Meta Tags -->
+    <title>Screenshot Store - Advanced Screen Capture & Sharing Tool</title>
+    <meta name="title" content="Screenshot Store - Advanced Screen Capture & Sharing Tool" />
+    <meta name="description" content="Professional screenshot capture and sharing platform with advanced editing, SEO optimization, social sharing, and QR code generation. Capture, edit, and share images instantly." />
+    <meta name="keywords" content="screenshot, screen capture, image sharing, photo editor, SEO optimization, social sharing, QR code, drag drop upload" />
     <meta name="author" content="Screenshot Store" />
     <meta name="robots" content="index, follow" />
-    <link rel="canonical" href="https://screenshot-store.com" />
-
+    <meta name="language" content="English" />
+    
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://screenshot-store.com" />
-    <meta property="og:title" content="Screenshot Store - Fast Screen Capture & Share Tool" />
-    <meta property="og:description" content="Fast screenshot tool with area selection, powerful editing, and instant sharing via short links. Capture any area on your desktop with 2 button-clicks." />
-    <meta property="og:image" content="https://screenshot-store.com/og-image.png" />
+    <meta property="og:url" content="https://screenshot-store.com/" />
+    <meta property="og:title" content="Screenshot Store - Advanced Screen Capture & Sharing Tool" />
+    <meta property="og:description" content="Professional screenshot capture and sharing platform with advanced editing, SEO optimization, social sharing, and QR code generation. Capture, edit, and share images instantly." />
+    <meta property="og:image" content="/Screenshot.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:site_name" content="Screenshot Store" />
-
+    
     <!-- Twitter -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content="https://screenshot-store.com" />
-    <meta name="twitter:title" content="Screenshot Store - Fast Screen Capture & Share Tool" />
-    <meta name="twitter:description" content="Fast screenshot tool with area selection, powerful editing, and instant sharing via short links. Capture any area on your desktop with 2 button-clicks." />
-    <meta name="twitter:image" content="https://screenshot-store.com/twitter-image.png" />
-    <meta name="twitter:creator" content="@screenshotstore" />
-
-    <!-- Additional SEO Meta Tags -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://screenshot-store.com/" />
+    <meta property="twitter:title" content="Screenshot Store - Advanced Screen Capture & Sharing Tool" />
+    <meta property="twitter:description" content="Professional screenshot capture and sharing platform with advanced editing, SEO optimization, social sharing, and QR code generation." />
+    <meta property="twitter:image" content="/Screenshot.png" />
+    
+    <!-- PWA Support -->
     <meta name="theme-color" content="#3b82f6" />
-    <meta name="msapplication-TileColor" content="#3b82f6" />
-    <meta name="application-name" content="Screenshot Store" />
-    <meta name="apple-mobile-web-app-title" content="Screenshot Store" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-
+    <meta name="apple-mobile-web-app-title" content="Screenshot Store" />
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Additional Meta Tags -->
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="msapplication-TileColor" content="#3b82f6" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://screenshot-store.com/" />
+    
     <!-- Structured Data -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
       "name": "Screenshot Store",
-      "description": "Fast screenshot tool with area selection, powerful editing, and instant sharing via short links",
       "url": "https://screenshot-store.com",
-      "applicationCategory": "Utility",
+      "description": "Advanced screen capture and sharing platform with editing tools and SEO optimization",
+      "applicationCategory": "PhotographyApplication",
       "operatingSystem": "Web Browser",
       "offers": {
         "@type": "Offer",
         "price": "0",
         "priceCurrency": "USD"
       },
-      "featureList": [
-        "Fast area selection screenshot",
-        "Powerful image editor",
-        "Short link sharing",
-        "SEO optimization",
-        "Gallery management"
-      ]
+      "author": {
+        "@type": "Organization",
+        "name": "Screenshot Store"
+      }
     }
     </script>
   </head>
-
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- PWA Installation Script -->
+    <script>
+      // Register service worker
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('SW registered: ', registration);
+            })
+            .catch((registrationError) => {
+              console.log('SW registration failed: ', registrationError);
+            });
+        });
+      }
+    </script>
   </body>
 </html>
