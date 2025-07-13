@@ -52,6 +52,55 @@ export const useImageProcessing = () => {
     }
   };
 
+  const processMultipleImages = async (
+    files: File[], 
+    uploadOptions: any,
+    onProgress?: (progress: number) => void
+  ): Promise<string[]> => {
+    setIsProcessing(true);
+    const processedImages: string[] = [];
+    
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        let processedFile = file;
+        
+        // Apply compression if requested
+        if (uploadOptions.compress) {
+          processedFile = await compressImage(processedFile, uploadOptions.quality / 100);
+        }
+        
+        // Remove EXIF if requested
+        if (uploadOptions.removeExif) {
+          processedFile = await removeExifData(processedFile);
+        }
+        
+        // Convert format if different
+        if (uploadOptions.format && !file.type.includes(uploadOptions.format)) {
+          processedFile = await convertFormat(processedFile, `image/${uploadOptions.format}`);
+        }
+        
+        // Create data URL
+        const dataUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.readAsDataURL(processedFile);
+        });
+        
+        processedImages.push(dataUrl);
+        
+        // Update progress
+        if (onProgress) {
+          onProgress(((i + 1) / files.length) * 100);
+        }
+      }
+      
+      return processedImages;
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const compressImage = async (file: File, quality: number = 0.8): Promise<File> => {
     return new Promise((resolve) => {
       const canvas = document.createElement('canvas');
@@ -137,6 +186,7 @@ export const useImageProcessing = () => {
 
   return {
     processImage,
+    processMultipleImages,
     compressImage,
     convertFormat,
     removeExifData,

@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { useImageProcessing } from '@/hooks/useImageProcessing';
-import ImageUploadZone from './ImageUploadZone';
+import { ImageUploadZone } from './ImageUploadZone';
 import ScreenshotEditor from './ScreenshotEditor';
 import { generateShortLink, generateShareableUrl } from '@/utils/config';
+import { UploadOptions } from '@/types/screenshot';
 
 interface ProcessedImage {
   id: string;
@@ -28,6 +29,15 @@ const ScreenshotCapture = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { processImage, compressImage } = useImageProcessing();
 
+  // Default upload options
+  const defaultUploadOptions: UploadOptions = {
+    compress: true,
+    quality: 80,
+    format: 'png',
+    removeExif: false,
+    addWatermark: false
+  };
+
   // Capture screen using modern Screen Capture API
   const captureScreen = useCallback(async () => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
@@ -42,9 +52,9 @@ const ScreenshotCapture = () => {
     try {
       setIsCapturing(true);
       
-      // Request screen capture
+      // Request screen capture - fix the mediaSource issue
       const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { mediaSource: 'screen' }
+        video: true
       });
 
       // Create video element to capture frame
@@ -154,6 +164,23 @@ const ScreenshotCapture = () => {
     }
   }, [processImage, compressImage]);
 
+  // Handle images processed from ImageUploadZone
+  const handleImagesProcessed = useCallback((dataUrls: string[], files: File[]) => {
+    const processedImages: ProcessedImage[] = dataUrls.map((dataUrl, index) => ({
+      id: `img-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${index}`,
+      file: files[index],
+      dataUrl,
+      metadata: {
+        size: files[index].size,
+        format: files[index].type,
+        dimensions: { width: 0, height: 0 }, // Will be updated when image loads
+        hasExif: files[index].type === 'image/jpeg'
+      }
+    }));
+
+    setCapturedImages(prev => [...prev, ...processedImages]);
+  }, []);
+
   // Save image to gallery
   const saveToGallery = (image: ProcessedImage, editedDataUrl?: string) => {
     const screenshot = {
@@ -238,7 +265,10 @@ const ScreenshotCapture = () => {
           />
 
           <div className="mt-6">
-            <ImageUploadZone onImagesUploaded={handleImageCapture} />
+            <ImageUploadZone 
+              onImagesProcessed={handleImagesProcessed}
+              uploadOptions={defaultUploadOptions}
+            />
           </div>
         </CardContent>
       </Card>
@@ -297,12 +327,17 @@ const ScreenshotCapture = () => {
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-6xl max-h-[90vh] overflow-hidden w-full">
             <ScreenshotEditor
-              image={editingImage}
-              onSave={(editedDataUrl) => {
-                saveToGallery(editingImage, editedDataUrl);
+              screenshot={{
+                id: editingImage.id,
+                dataUrl: editingImage.dataUrl,
+                title: `Screenshot ${new Date().toLocaleString()}`,
+                description: 'Captured screenshot',
+                timestamp: new Date()
+              }}
+              onSave={(screenshot) => {
+                saveToGallery(editingImage, screenshot.dataUrl);
                 setEditingImage(null);
               }}
-              onClose={() => setEditingImage(null)}
             />
           </div>
         </div>
