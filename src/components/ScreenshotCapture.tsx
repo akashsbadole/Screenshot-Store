@@ -183,13 +183,16 @@ const ScreenshotCapture = () => {
 
   // Save image to gallery
   const saveToGallery = (image: ProcessedImage, editedDataUrl?: string) => {
+    const shortLink = generateShortLink(image.id);
+    const shareableUrl = generateShareableUrl(image.id, `Screenshot ${new Date().toLocaleString()}`);
+    
     const screenshot = {
       id: image.id,
       dataUrl: editedDataUrl || image.dataUrl,
       title: `Screenshot ${new Date().toLocaleString()}`,
       description: 'Captured screenshot',
       timestamp: new Date(),
-      shortLink: generateShortLink(image.id),
+      shortLink: shortLink, // Always include short link
       seoTitle: `Screenshot - ${new Date().toLocaleDateString()}`,
       seoDescription: 'Professional screenshot captured and processed',
       tags: ['screenshot', 'capture']
@@ -202,7 +205,7 @@ const ScreenshotCapture = () => {
 
     toast({
       title: "Saved!",
-      description: "Screenshot saved to gallery with shareable link."
+      description: `Screenshot saved with link: ${shortLink}`
     });
   };
 

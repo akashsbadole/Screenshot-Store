@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { QRCodeGenerator } from './QRCodeGenerator';
 import SocialShare from './SocialShare';
+import { generateShortLink, getBaseUrl } from '@/utils/config';
 import { 
   Search, 
   Share2, 
@@ -111,38 +112,38 @@ const ScreenshotGallery = () => {
   };
 
   const generateDemoScreenshots = () => {
-    const baseUrl = window.location.origin; // Use current domain
+    const baseUrl = getBaseUrl(); // Use the config utility
     
     const demoScreenshots: Screenshot[] = [
       {
-        id: '1',
+        id: 'demo-1',
         dataUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzM0OThmMyIvPgogIDx0ZXh0IHg9IjIwMCIgeT0iMTUwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5EZW1vIFNjcmVlbnNob3QgMTwvdGV4dD4KPC9zdmc+',
         title: 'Project Dashboard',
         description: 'Main dashboard overview with analytics',
         timestamp: new Date(Date.now() - 86400000),
-        shortLink: `${baseUrl}/s/abc123`,
+        shortLink: generateShortLink('demo-1'), // Use the config utility
         seoTitle: 'Amazing Project Dashboard - Analytics Overview',
         seoDescription: 'Beautiful dashboard showing comprehensive project analytics and metrics for better decision making',
         tags: ['dashboard', 'analytics', 'project', 'metrics']
       },
       {
-        id: '2',
+        id: 'demo-2',
         dataUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzEwYjk4MSIvPgogIDx0ZXh0IHg9IjIwMCIgeT0iMTUwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5EZW1vIFNjcmVlbnNob3QgMjwvdGV4dD4KPC9zdmc+',
         title: 'User Profile Settings',
         description: 'Account settings and preferences panel',
         timestamp: new Date(Date.now() - 172800000),
-        shortLink: `${baseUrl}/s/def456`,
+        shortLink: generateShortLink('demo-2'), // Use the config utility
         seoTitle: 'User Profile & Settings Interface',
         seoDescription: 'Clean and intuitive user profile settings interface with comprehensive account management options',
         tags: ['profile', 'settings', 'ui', 'user-interface']
       },
       {
-        id: '3',
+        id: 'demo-3',
         dataUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2Y1OWU0YiIvPgogIDx0ZXh0IHg9IjIwMCIgeT0iMTUwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5EZW1vIFNjcmVlbnNob3QgMzwvdGV4dD4KPC9zdmc+',
         title: 'Chart Analytics',
         description: 'Performance metrics and data visualization',
         timestamp: new Date(Date.now() - 259200000),
-        shortLink: `${baseUrl}/s/ghi789`,
+        shortLink: generateShortLink('demo-3'), // Use the config utility
         seoTitle: 'Data Visualization & Analytics Charts',
         seoDescription: 'Comprehensive performance metrics with beautiful data visualization and interactive charts',
         tags: ['charts', 'analytics', 'data', 'visualization']
@@ -153,7 +154,7 @@ const ScreenshotGallery = () => {
     
     toast({
       title: "Demo Screenshots Added!",
-      description: "Sample screenshots with your domain's shareable links have been added."
+      description: `Sample screenshots with ${baseUrl} shareable links have been added.`
     });
   };
 
